@@ -230,6 +230,7 @@ jobs:
         with:
           context: ./docker/sentinel
           push: true
+          build-args: BASE_IMAGE=${{ env.DOCKER_REGISTRY_PREFIX }}/led-management-backend:latest
           tags: |
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-sentinel:latest
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-sentinel:${{ github.sha }}
