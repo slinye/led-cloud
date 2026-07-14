@@ -175,6 +175,8 @@ jobs:
         with:
           context: ./led-gateway
           push: true
+          build-args: |
+            BASE_IMAGE=${{ env.DOCKER_REGISTRY_PREFIX }}/led-management-backend:latest
           tags: |
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-gateway:latest
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-gateway:${{ github.sha }}
@@ -184,6 +186,8 @@ jobs:
         with:
           context: ./led-auth
           push: true
+          build-args: |
+            BASE_IMAGE=${{ env.DOCKER_REGISTRY_PREFIX }}/led-management-backend:latest
           tags: |
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-auth:latest
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-auth:${{ github.sha }}
@@ -193,6 +197,8 @@ jobs:
         with:
           context: ./led-device
           push: true
+          build-args: |
+            BASE_IMAGE=${{ env.DOCKER_REGISTRY_PREFIX }}/led-management-backend:latest
           tags: |
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-device:latest
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-device:${{ github.sha }}
@@ -202,6 +208,8 @@ jobs:
         with:
           context: ./led-content
           push: true
+          build-args: |
+            BASE_IMAGE=${{ env.DOCKER_REGISTRY_PREFIX }}/led-management-backend:latest
           tags: |
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-content:latest
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-content:${{ github.sha }}
@@ -211,6 +219,8 @@ jobs:
         with:
           context: ./led-schedule
           push: true
+          build-args: |
+            BASE_IMAGE=${{ env.DOCKER_REGISTRY_PREFIX }}/led-management-backend:latest
           tags: |
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-schedule:latest
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-schedule:${{ github.sha }}

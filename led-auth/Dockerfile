@@ -1,5 +1,7 @@
-FROM led-management-backend:latest
+ARG BASE_IMAGE=led-management-backend:latest
+FROM ${BASE_IMAGE}
 WORKDIR /app
 COPY target/led-auth-1.0.0.jar /app/app.jar
 EXPOSE 9001
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+
