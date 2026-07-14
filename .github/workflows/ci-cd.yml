@@ -169,10 +169,10 @@ jobs:
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-management-backend:latest
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-management-backend:${{ github.sha }}
 
-      - name: 🏷 拉取基础镜像到本地（供后续 FROM 使用）
+      - name: 🔍 验证基础镜像可拉取
         run: |
           docker pull ${{ env.DOCKER_REGISTRY_PREFIX }}/led-management-backend:latest
-          docker tag ${{ env.DOCKER_REGISTRY_PREFIX }}/led-management-backend:latest led-management-backend:latest
+          docker image ls ${{ env.DOCKER_REGISTRY_PREFIX }}/led-management-backend:latest
 
       # --- 构建各微服务镜像 ---
       - name: 🐳 构建 Gateway
@@ -180,6 +180,7 @@ jobs:
         with:
           context: ./led-gateway
           push: true
+          build-args: BASE_IMAGE=${{ env.DOCKER_REGISTRY_PREFIX }}/led-management-backend:latest
           tags: |
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-gateway:latest
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-gateway:${{ github.sha }}
@@ -189,6 +190,7 @@ jobs:
         with:
           context: ./led-auth
           push: true
+          build-args: BASE_IMAGE=${{ env.DOCKER_REGISTRY_PREFIX }}/led-management-backend:latest
           tags: |
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-auth:latest
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-auth:${{ github.sha }}
@@ -198,6 +200,7 @@ jobs:
         with:
           context: ./led-device
           push: true
+          build-args: BASE_IMAGE=${{ env.DOCKER_REGISTRY_PREFIX }}/led-management-backend:latest
           tags: |
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-device:latest
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-device:${{ github.sha }}
@@ -207,6 +210,7 @@ jobs:
         with:
           context: ./led-content
           push: true
+          build-args: BASE_IMAGE=${{ env.DOCKER_REGISTRY_PREFIX }}/led-management-backend:latest
           tags: |
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-content:latest
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-content:${{ github.sha }}
@@ -216,6 +220,7 @@ jobs:
         with:
           context: ./led-schedule
           push: true
+          build-args: BASE_IMAGE=${{ env.DOCKER_REGISTRY_PREFIX }}/led-management-backend:latest
           tags: |
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-schedule:latest
             ${{ env.DOCKER_REGISTRY_PREFIX }}/led-schedule:${{ github.sha }}
