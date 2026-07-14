@@ -240,10 +240,11 @@ jobs:
     needs: docker
     if: |
       (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
-      (github.event_name == 'push' || github.event.inputs.deploy == 'true')
+      (github.event_name == 'push' || github.event.inputs.deploy == 'true') &&
+      secrets.DEPLOY_HOST != ''
     environment:
       name: production
-      url: http://${{ secrets.DEPLOY_HOST }}:82
+      url: http://deploy-server:82
     steps:
       - name: 📥 检出代码
         uses: actions/checkout@v4
