@@ -44,3 +44,9 @@ knife4j:
   enable: true
   setting:
     language: zh-CN
+
+# 微信小程序配置（在微信公众平台获取）
+wechat:
+  miniapp:
+    appid: ${WECHAT_APPID:}
+    secret: ${WECHAT_SECRET:}

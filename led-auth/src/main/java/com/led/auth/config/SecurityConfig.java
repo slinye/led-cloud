@@ -45,6 +45,7 @@ public class SecurityConfig {
             .and()
             .authorizeRequests()
             .antMatchers("/api/auth/login", "/api/auth/verify",
+                    "/api/client/**",
                     "/doc.html", "/webjars/**", "/swagger-resources/**", "/v2/api-docs/**").permitAll()
             .anyRequest().authenticated()
             .and()

@@ -14,6 +14,8 @@ public class User {
     private String nickname;
     private String role;
     private Integer status;
+    /** 微信小程序 openid */
+    private String wechatOpenid;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
     @TableField(fill = FieldFill.INSERT_UPDATE)
