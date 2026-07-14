@@ -1,0 +1,288 @@
+# ============================================
+# LED Cloud 生产环境 Docker Compose
+# 镜像从 Registry 拉取，不使用本地 build
+# ============================================
+services:
+  # ==================== MySQL ====================
+  mysql:
+    image: mysql:8.0
+    container_name: led-cloud-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: led_management
+    volumes:
+      - led_cloud_mysql_data:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks:
+      - led-cloud-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ==================== Redis ====================
+  redis:
+    image: redis:7-alpine
+    container_name: led-cloud-redis
+    restart: always
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - led_cloud_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - led-cloud-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "3"
+
+  # ==================== Mosquitto MQTT ====================
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: led-cloud-mosquitto
+    restart: always
+    volumes:
+      - ./docker/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - led_cloud_mosquitto_data:/mosquitto/data
+      - led_cloud_mosquitto_log:/mosquitto/log
+    networks:
+      - led-cloud-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "3"
+
+  # ==================== Nacos ====================
+  nacos:
+    image: nacos/nacos-server:v2.2.3
+    container_name: led-cloud-nacos
+    restart: always
+    environment:
+      - MODE=standalone
+      - NACOS_AUTH_ENABLE=true
+      - NACOS_AUTH_IDENTITY_KEY=${NACOS_IDENTITY_KEY:-led-cloud}
+      - NACOS_AUTH_IDENTITY_VALUE=${NACOS_IDENTITY_VALUE:-led-cloud-secret}
+      - JAVA_TOOL_OPTIONS=-Djdk.internal.platform.cgroupv2.force=false
+    volumes:
+      - led_cloud_nacos_data:/home/nacos/data
+      - ./docker/nacos/application.properties:/home/nacos/conf/application.properties
+    networks:
+      - led-cloud-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # ==================== Sentinel ====================
+  sentinel:
+    image: ${DOCKER_REGISTRY:-led-cloud}/led-sentinel:latest
+    container_name: led-cloud-sentinel
+    restart: always
+    environment:
+      - SENTINEL_DASHBOARD_USERNAME=${SENTINEL_USERNAME:-sentinel}
+      - SENTINEL_DASHBOARD_PASSWORD=${SENTINEL_PASSWORD:-sentinel}
+    networks:
+      - led-cloud-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "3"
+
+  # ==================== Seata ====================
+  seata:
+    image: seataio/seata-server:1.6.1
+    container_name: led-cloud-seata
+    restart: always
+    environment:
+      - SEATA_PORT=8091
+      - STORE_MODE=db
+      - STORE_DB_DATASOURCE=druid
+      - STORE_DB_URL=jdbc:mysql://mysql:3306/seata?useUnicode=true
+      - STORE_DB_USERNAME=root
+      - STORE_DB_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - ./docker/seata/application.yml:/seata-server/resources/application.yml
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - led-cloud-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "3"
+
+  # ==================== API 网关 ====================
+  gateway:
+    image: ${DOCKER_REGISTRY:-led-cloud}/led-gateway:latest
+    container_name: led-cloud-gateway
+    restart: always
+    environment:
+      NACOS_ADDR: nacos:8848
+      SENTINEL_ADDR: sentinel:8080
+    depends_on:
+      - nacos
+      - sentinel
+    networks:
+      - led-cloud-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ==================== 认证中心 ====================
+  auth:
+    image: ${DOCKER_REGISTRY:-led-cloud}/led-auth:latest
+    container_name: led-cloud-auth
+    restart: always
+    environment:
+      NACOS_ADDR: nacos:8848
+      SENTINEL_ADDR: sentinel:8080
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      nacos:
+        condition: service_started
+    networks:
+      - led-cloud-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "3"
+
+  # ==================== 设备管理服务 ====================
+  device:
+    image: ${DOCKER_REGISTRY:-led-cloud}/led-device:latest
+    container_name: led-cloud-device
+    restart: always
+    environment:
+      NACOS_ADDR: nacos:8848
+      SENTINEL_ADDR: sentinel:8080
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MQTT_HOST: mosquitto
+      MQTT_PORT: 1883
+    depends_on:
+      mysql:
+        condition: service_healthy
+      nacos:
+        condition: service_started
+      mosquitto:
+        condition: service_started
+    networks:
+      - led-cloud-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # ==================== 内容管理服务 ====================
+  content:
+    image: ${DOCKER_REGISTRY:-led-cloud}/led-content:latest
+    container_name: led-cloud-content
+    restart: always
+    environment:
+      NACOS_ADDR: nacos:8848
+      SENTINEL_ADDR: sentinel:8080
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      FILE_UPLOAD_DIR: /app/uploads
+    volumes:
+      - led_cloud_uploads:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+      nacos:
+        condition: service_started
+    networks:
+      - led-cloud-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "3"
+
+  # ==================== 调度服务 ====================
+  schedule:
+    image: ${DOCKER_REGISTRY:-led-cloud}/led-schedule:latest
+    container_name: led-cloud-schedule
+    restart: always
+    environment:
+      NACOS_ADDR: nacos:8848
+      SENTINEL_ADDR: sentinel:8080
+      SEATA_ADDR: seata:8091
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      nacos:
+        condition: service_started
+      seata:
+        condition: service_started
+    networks:
+      - led-cloud-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ==================== 前端 ====================
+  frontend:
+    image: ${DOCKER_REGISTRY:-led-cloud}/led-frontend:latest
+    container_name: led-cloud-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - gateway
+    networks:
+      - led-cloud-net
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+volumes:
+  led_cloud_mysql_data:
+  led_cloud_redis_data:
+  led_cloud_mosquitto_data:
+  led_cloud_mosquitto_log:
+  led_cloud_nacos_data:
+  led_cloud_uploads:
+
+networks:
+  led-cloud-net:
+    driver: bridge

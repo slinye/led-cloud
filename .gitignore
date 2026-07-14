@@ -1,0 +1,33 @@
+# Maven
+target/
+*.class
+*.jar
+*.war
+
+# Node
+node_modules/
+dist/
+*.log
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.pid
+
+# Env (保留 .env.example)
+.env
+.env.*
+!.env.example
+
+# Uploads (本地测试文件)
+local-uploads/

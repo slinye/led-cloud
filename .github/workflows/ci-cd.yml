@@ -1,0 +1,262 @@
+# ============================================
+# LED Cloud CI/CD Pipeline (GitHub Actions)
+# 触发: push main/master + PR + 手动触发
+# 阶段: build → docker → push → deploy
+# ============================================
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, master, develop]
+    tags: ['v*']
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: '是否自动部署到服务器'
+        type: boolean
+        default: false
+
+env:
+  DOCKER_REGISTRY: ${{ secrets.DOCKER_REGISTRY || '' }}
+  DOCKER_REGISTRY_PREFIX: ${{ secrets.DOCKER_REGISTRY_PREFIX || 'led-cloud' }}
+
+jobs:
+  # ==================== 编译 & 单元测试 ====================
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        module: [backend, frontend]
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+
+      # ───────── 后端: Maven 编译 ─────────
+      - name: ☕ 设置 JDK 8
+        if: matrix.module == 'backend'
+        uses: actions/setup-java@v4
+        with:
+          java-version: '8'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: 🔨 Maven 编译（跳过测试）
+        if: matrix.module == 'backend'
+        run: |
+          mvn package -DskipTests \
+            -pl led-common,led-gateway,led-auth,led-device,led-content,led-schedule \
+            -am --batch-mode --no-transfer-progress
+
+      - name: 📦 上传 gateway JAR
+        if: matrix.module == 'backend'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jar-gateway
+          path: led-gateway/target/*.jar
+
+      - name: 📦 上传 auth JAR
+        if: matrix.module == 'backend'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jar-auth
+          path: led-auth/target/*.jar
+
+      - name: 📦 上传 device JAR
+        if: matrix.module == 'backend'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jar-device
+          path: led-device/target/*.jar
+
+      - name: 📦 上传 content JAR
+        if: matrix.module == 'backend'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jar-content
+          path: led-content/target/*.jar
+
+      - name: 📦 上传 schedule JAR
+        if: matrix.module == 'backend'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jar-schedule
+          path: led-schedule/target/*.jar
+
+      # ───────── 前端: npm 编译 ─────────
+      - name: 🌿 设置 Node.js 20
+        if: matrix.module == 'frontend'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 🔨 前端构建
+        if: matrix.module == 'frontend'
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: 📦 上传前端 dist
+        if: matrix.module == 'frontend'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+
+  # ==================== Docker 构建 & 推送 ====================
+  docker:
+    name: Docker Build & Push
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name != 'pull_request'
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+
+      - name: ⬇ 下载后端 JARs
+        uses: actions/download-artifact@v4
+        with:
+          name: jar-gateway
+          path: led-gateway/target/
+      - name: ⬇ 下载后端 JARs
+        uses: actions/download-artifact@v4
+        with:
+          name: jar-auth
+          path: led-auth/target/
+      - name: ⬇ 下载后端 JARs
+        uses: actions/download-artifact@v4
+        with:
+          name: jar-device
+          path: led-device/target/
+      - name: ⬇ 下载后端 JARs
+        uses: actions/download-artifact@v4
+        with:
+          name: jar-content
+          path: led-content/target/
+      - name: ⬇ 下载后端 JARs
+        uses: actions/download-artifact@v4
+        with:
+          name: jar-schedule
+          path: led-schedule/target/
+      - name: ⬇ 下载前端 dist
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+
+      - name: 🔐 登录 Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: 🏗 设置 Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # --- 构建基础镜像 ---
+      - name: 🐳 构建基础镜像 (led-management-backend)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./docker/backend
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY_PREFIX }}/led-management-backend:latest
+            ${{ env.DOCKER_REGISTRY_PREFIX }}/led-management-backend:${{ github.sha }}
+
+      # --- 构建各微服务镜像 ---
+      - name: 🐳 构建 Gateway
+        uses: docker/build-push-action@v6
+        with:
+          context: ./led-gateway
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY_PREFIX }}/led-gateway:latest
+            ${{ env.DOCKER_REGISTRY_PREFIX }}/led-gateway:${{ github.sha }}
+
+      - name: 🐳 构建 Auth
+        uses: docker/build-push-action@v6
+        with:
+          context: ./led-auth
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY_PREFIX }}/led-auth:latest
+            ${{ env.DOCKER_REGISTRY_PREFIX }}/led-auth:${{ github.sha }}
+
+      - name: 🐳 构建 Device
+        uses: docker/build-push-action@v6
+        with:
+          context: ./led-device
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY_PREFIX }}/led-device:latest
+            ${{ env.DOCKER_REGISTRY_PREFIX }}/led-device:${{ github.sha }}
+
+      - name: 🐳 构建 Content
+        uses: docker/build-push-action@v6
+        with:
+          context: ./led-content
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY_PREFIX }}/led-content:latest
+            ${{ env.DOCKER_REGISTRY_PREFIX }}/led-content:${{ github.sha }}
+
+      - name: 🐳 构建 Schedule
+        uses: docker/build-push-action@v6
+        with:
+          context: ./led-schedule
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY_PREFIX }}/led-schedule:latest
+            ${{ env.DOCKER_REGISTRY_PREFIX }}/led-schedule:${{ github.sha }}
+
+      - name: 🐳 构建 Sentinel
+        uses: docker/build-push-action@v6
+        with:
+          context: ./docker/sentinel
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY_PREFIX }}/led-sentinel:latest
+            ${{ env.DOCKER_REGISTRY_PREFIX }}/led-sentinel:${{ github.sha }}
+
+      - name: 🐳 构建 Frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ env.DOCKER_REGISTRY_PREFIX }}/led-frontend:latest
+            ${{ env.DOCKER_REGISTRY_PREFIX }}/led-frontend:${{ github.sha }}
+
+  # ==================== 自动部署 ====================
+  deploy:
+    name: Deploy to Server
+    runs-on: ubuntu-latest
+    needs: docker
+    if: |
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
+      (github.event_name == 'push' || github.event.inputs.deploy == 'true')
+    environment:
+      name: production
+      url: http://${{ secrets.DEPLOY_HOST }}:82
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+
+      - name: 🔑 SSH 部署到服务器
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          script: |
+            cd ${{ secrets.DEPLOY_PATH || '/opt/led-cloud' }}
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker image prune -f

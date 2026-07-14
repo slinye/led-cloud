@@ -1,0 +1,59 @@
+server:
+  port: 9000
+
+spring:
+  application:
+    name: led-gateway
+  config:
+    import: "optional:nacos:led-gateway.yml"
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:127.0.0.1:8848}
+    sentinel:
+      transport:
+        dashboard: ${SENTINEL_ADDR:127.0.0.1:8080}
+      eager: true
+      # Sentinel 网关限流规则（可通过dashboard动态配置）
+      scg:
+        fallback:
+          mode: response
+          response-status: 429
+          response-body: '{"code":429,"message":"请求过于频繁，请稍后再试"}'
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      # 路由规则
+      routes:
+        # ---- 认证中心 ----
+        - id: led-auth
+          uri: lb://led-auth
+          predicates:
+            - Path=/api/auth/**,/api/users/**
+        # ---- 设备管理 ----
+        - id: led-device
+          uri: lb://led-device
+          predicates:
+            - Path=/api/screens/**,/api/screen-groups/**
+        # ---- 内容管理 ----
+        - id: led-content
+          uri: lb://led-content
+          predicates:
+            - Path=/api/contents/**,/uploads/**
+          filters:
+            - StripPrefix=0
+        # ---- 调度服务 ----
+        - id: led-schedule
+          uri: lb://led-schedule
+          predicates:
+            - Path=/api/programs/**,/api/playback/**,/api/batch/**,/api/dashboard/**,/api/play-logs/**,/api/logs/**,/api/settings/**
+      # 全局 CORS
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods: "GET,POST,PUT,DELETE,OPTIONS"
+            allowedHeaders: "*"
+            allowCredentials: true

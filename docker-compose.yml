@@ -1,0 +1,247 @@
+services:
+  # ==================== MySQL ====================
+  mysql:
+    image: mysql:8.0
+    container_name: led-cloud-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: led_management
+    ports:
+      - "3310:3306"
+    volumes:
+      - led_cloud_mysql_data:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p123456"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+    networks:
+      - led-cloud-net
+
+  # ==================== Redis ====================
+  redis:
+    image: redis:7-alpine
+    container_name: led-cloud-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6382:6379"
+    volumes:
+      - led_cloud_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - led-cloud-net
+
+  # ==================== Mosquitto MQTT ====================
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: led-cloud-mosquitto
+    restart: unless-stopped
+    ports:
+      - "1886:1883"
+      - "9006:9001"
+    volumes:
+      - ./docker/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - led_cloud_mosquitto_data:/mosquitto/data
+      - led_cloud_mosquitto_log:/mosquitto/log
+    networks:
+      - led-cloud-net
+
+  # ==================== Nacos (注册中心 + 配置中心) ====================
+  nacos:
+    image: nacos/nacos-server:v2.2.3
+    container_name: led-cloud-nacos
+    restart: unless-stopped
+    environment:
+      - MODE=standalone
+      - NACOS_AUTH_ENABLE=false
+      - JAVA_TOOL_OPTIONS=-Djdk.internal.platform.cgroupv2.force=false
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    volumes:
+      - led_cloud_nacos_data:/home/nacos/data
+      - ./docker/nacos/application.properties:/home/nacos/conf/application.properties
+    networks:
+      - led-cloud-net
+
+  # ==================== Sentinel Dashboard (熔断限流控制台) ====================
+  sentinel:
+    build: ./docker/sentinel
+    container_name: led-cloud-sentinel
+    restart: unless-stopped
+    environment:
+      - SENTINEL_DASHBOARD_USERNAME=sentinel
+      - SENTINEL_DASHBOARD_PASSWORD=sentinel
+    ports:
+      - "8088:8080"
+    networks:
+      - led-cloud-net
+
+  # ==================== Seata Server (分布式事务) ====================
+  seata:
+    image: seataio/seata-server:1.6.1
+    container_name: led-cloud-seata
+    restart: unless-stopped
+    ports:
+      - "8091:8091"
+      - "7091:7091"
+    environment:
+      - SEATA_PORT=8091
+      - STORE_MODE=db
+      - STORE_DB_DATASOURCE=druid
+      - STORE_DB_URL=jdbc:mysql://mysql:3306/seata?useUnicode=true
+      - STORE_DB_USERNAME=root
+      - STORE_DB_PASSWORD=123456
+    volumes:
+      - ./docker/seata/application.yml:/seata-server/resources/application.yml
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - led-cloud-net
+
+  # ==================== API 网关 ====================
+  gateway:
+    build: ./led-gateway
+    container_name: led-cloud-gateway
+    restart: unless-stopped
+    ports:
+      - "9100:9000"
+    environment:
+      NACOS_ADDR: nacos:8848
+      SENTINEL_ADDR: sentinel:8080
+    depends_on:
+      - nacos
+      - sentinel
+    networks:
+      - led-cloud-net
+
+  # ==================== 认证中心 ====================
+  auth:
+    build: ./led-auth
+    container_name: led-cloud-auth
+    restart: unless-stopped
+    ports:
+      - "9101:9001"
+    environment:
+      NACOS_ADDR: nacos:8848
+      SENTINEL_ADDR: sentinel:8080
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: 123456
+    depends_on:
+      mysql:
+        condition: service_healthy
+      nacos:
+        condition: service_started
+    networks:
+      - led-cloud-net
+
+  # ==================== 设备管理服务 ====================
+  device:
+    build: ./led-device
+    container_name: led-cloud-device
+    restart: unless-stopped
+    ports:
+      - "9102:9002"
+    environment:
+      NACOS_ADDR: nacos:8848
+      SENTINEL_ADDR: sentinel:8080
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: 123456
+      MQTT_HOST: mosquitto
+      MQTT_PORT: 1883
+    depends_on:
+      mysql:
+        condition: service_healthy
+      nacos:
+        condition: service_started
+      mosquitto:
+        condition: service_started
+    networks:
+      - led-cloud-net
+
+  # ==================== 内容管理服务 ====================
+  content:
+    build: ./led-content
+    container_name: led-cloud-content
+    restart: unless-stopped
+    ports:
+      - "9103:9003"
+    environment:
+      NACOS_ADDR: nacos:8848
+      SENTINEL_ADDR: sentinel:8080
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: 123456
+      FILE_UPLOAD_DIR: /app/uploads
+    volumes:
+      - led_cloud_uploads:/app/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+      nacos:
+        condition: service_started
+    networks:
+      - led-cloud-net
+
+  # ==================== 调度服务 ====================
+  schedule:
+    build: ./led-schedule
+    container_name: led-cloud-schedule
+    restart: unless-stopped
+    ports:
+      - "9104:9004"
+    environment:
+      NACOS_ADDR: nacos:8848
+      SENTINEL_ADDR: sentinel:8080
+      SEATA_ADDR: seata:8091
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: 123456
+    depends_on:
+      mysql:
+        condition: service_healthy
+      nacos:
+        condition: service_started
+      seata:
+        condition: service_started
+    networks:
+      - led-cloud-net
+
+  # ==================== 前端 (Vue3) ====================
+  frontend:
+    build: ./frontend
+    container_name: led-cloud-frontend
+    restart: unless-stopped
+    ports:
+      - "82:80"
+    depends_on:
+      - gateway
+    networks:
+      - led-cloud-net
+
+volumes:
+  led_cloud_mysql_data:
+  led_cloud_redis_data:
+  led_cloud_mosquitto_data:
+  led_cloud_mosquitto_log:
+  led_cloud_nacos_data:
+  led_cloud_uploads:
+
+networks:
+  led-cloud-net:
+    driver: bridge
