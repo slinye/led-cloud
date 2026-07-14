@@ -240,8 +240,7 @@ jobs:
     needs: docker
     if: |
       (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
-      (github.event_name == 'push' || github.event.inputs.deploy == 'true') &&
-      secrets.DEPLOY_HOST != ''
+      (github.event_name == 'push' || github.event.inputs.deploy == 'true')
     environment:
       name: production
       url: http://deploy-server:82
@@ -249,7 +248,19 @@ jobs:
       - name: 📥 检出代码
         uses: actions/checkout@v4
 
+      - name: 🔍 检查部署配置
+        id: check_deploy
+        run: |
+          if [ -n "${{ secrets.DEPLOY_HOST }}" ]; then
+            echo "ready=true" >> $GITHUB_OUTPUT
+            echo "Deploy host: ${{ secrets.DEPLOY_HOST }}"
+          else
+            echo "ready=false" >> $GITHUB_OUTPUT
+            echo "DEPLOY_HOST 未配置，跳过部署"
+          fi
+
       - name: 🔑 SSH 部署到服务器
+        if: steps.check_deploy.outputs.ready == 'true'
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DEPLOY_HOST }}
