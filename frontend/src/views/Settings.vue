@@ -18,11 +18,40 @@
         <el-form-item label="心跳间隔">
           <el-input-number v-model="form.heartbeatInterval" :min="5" :max="300" /> 秒
         </el-form-item>
+        <el-form-item label="心跳超时阈值">
+          <el-input-number v-model="form.heartbeatTimeout" :min="10" :max="600" /> 秒
+          <div class="setting-tip">超过此时间未收到心跳的设备标记为离线</div>
+        </el-form-item>
+        <el-form-item label="文件存储路径">
+          <el-input v-model="form.uploadPath" placeholder="/data/uploads" />
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" :loading="saving" @click="handleSave">保存设置</el-button>
         </el-form-item>
       </el-form>
     </el-card>
+
+    <el-card style="margin-top: 20px;">
+      <template #header>
+        <span>MQTT 配置</span>
+        <el-tag size="small" type="info" style="margin-left: 8px;">服务端配置，需重启生效</el-tag>
+      </template>
+      <el-form label-width="140px" style="max-width: 600px;">
+        <el-form-item label="MQTT Broker">
+          <el-input v-model="mqttForm.broker" placeholder="tcp://localhost:1883" />
+        </el-form-item>
+        <el-form-item label="客户端ID前缀">
+          <el-input v-model="mqttForm.clientIdPrefix" placeholder="led-cloud" />
+        </el-form-item>
+        <el-form-item label="心跳Topic">
+          <el-input v-model="mqttForm.heartbeatTopic" placeholder="led/heartbeat" />
+        </el-form-item>
+        <el-form-item label="指令Topic">
+          <el-input v-model="mqttForm.commandTopic" placeholder="led/command" />
+        </el-form-item>
+      </el-form>
+    </el-card>
+
   </div>
 </template>
 
@@ -39,7 +68,16 @@ const form = reactive({
   defaultBrightness: 80,
   autoReconnect: true,
   logRetentionDays: 30,
-  heartbeatInterval: 30
+  heartbeatInterval: 30,
+  heartbeatTimeout: 60,
+  uploadPath: '/data/uploads'
+})
+
+const mqttForm = reactive({
+  broker: 'tcp://localhost:1883',
+  clientIdPrefix: 'led-cloud',
+  heartbeatTopic: 'led/heartbeat',
+  commandTopic: 'led/command'
 })
 
 async function loadSettings() {
@@ -55,10 +93,19 @@ async function loadSettings() {
 async function handleSave() {
   saving.value = true
   try {
-    await updateSettings({ ...form })
+    await updateSettings({ ...form, ...mqttForm })
     ElMessage.success('保存成功')
   } catch (e) { /* handled */ } finally { saving.value = false }
 }
 
 onMounted(loadSettings)
 </script>
+
+<style scoped>
+.setting-tip {
+  font-size: 12px;
+  color: #909399;
+  display: block;
+  margin-top: 4px;
+}
+</style>

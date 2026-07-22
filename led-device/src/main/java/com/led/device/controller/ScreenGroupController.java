@@ -56,4 +56,10 @@ public class ScreenGroupController {
     public R<List<ScreenGroupRel>> getGroupScreens(@PathVariable Long groupId) {
         return R.ok(screenGroupService.getGroupScreens(groupId));
     }
+
+    /** 获取已被任意分组关联的屏幕ID（排除指定分组，用于过滤可选列表） */
+    @GetMapping("/screens/assigned")
+    public R<List<Long>> getAssignedScreens(@RequestParam(required = false) Long excludeGroupId) {
+        return R.ok(screenGroupService.getAssignedScreenIds(excludeGroupId));
+    }
 }

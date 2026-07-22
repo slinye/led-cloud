@@ -1,0 +1,15 @@
+# 1. 配置环境变量
+cp .env.example .env
+# 编辑 .env 填入微信 appid/secret，改密码
+
+# 2. 一键构建
+./build.sh
+
+# 3. 启动所有服务
+docker compose up -d
+
+# 4. 查看日志
+docker compose logs -f
+
+# 5. 停止
+docker compose down

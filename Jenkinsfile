@@ -78,7 +78,6 @@ pipeline {
             steps {
                 script {
                     def images = [
-                        [ context: 'docker/backend', name: 'led-management-backend' ],
                         [ context: 'led-gateway',     name: 'led-gateway' ],
                         [ context: 'led-auth',        name: 'led-auth' ],
                         [ context: 'led-device',      name: 'led-device' ],
@@ -90,7 +89,7 @@ pipeline {
 
                     // 先构建基础镜像
                     sh """
-                        docker build -t led-management-backend:latest ./docker/backend
+                        docker build -t led-cloud-base:latest ./docker/java-base
                     """
 
                     // 并行构建所有服务镜像
@@ -129,7 +128,7 @@ pipeline {
                         sh "docker login -u ${DOCKER_USER} -p ${DOCKER_PASS} ${DOCKER_REGISTRY}"
                     }
 
-                    def services = ['led-management-backend', 'led-gateway', 'led-auth',
+                    def services = ['led-cloud-base', 'led-gateway', 'led-auth',
                                     'led-device', 'led-content', 'led-schedule',
                                     'led-sentinel', 'led-frontend']
 

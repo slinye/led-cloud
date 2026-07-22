@@ -1,7 +1,9 @@
 package com.led.auth.service;
 
 import com.led.auth.config.WechatConfig;
+import com.led.auth.controller.CaptchaController;
 import com.led.auth.mapper.UserMapper;
+import com.led.common.dto.BindAccountRequest;
 import com.led.common.dto.ChangePasswordRequest;
 import com.led.common.dto.LoginRequest;
 import com.led.common.dto.WechatLoginRequest;
@@ -34,6 +36,13 @@ public class AuthService {
 
     /** 登录，返回 JWT Token */
     public Map<String, Object> login(LoginRequest request) {
+        // 验证码校验（有 captchaKey 时才校验，兼容旧客户端）
+        if (request.getCaptchaKey() != null && !request.getCaptchaKey().isEmpty()) {
+            if (!CaptchaController.verify(request.getCaptchaKey(), request.getCaptchaCode())) {
+                throw new BusinessException(400, "验证码错误或已过期");
+            }
+        }
+
         User user = userMapper.selectByUsername(request.getUsername());
         if (user == null) {
             throw new BusinessException(401, "用户名或密码错误");
@@ -75,8 +84,17 @@ public class AuthService {
 
     /**
      * 调用微信 code2session 接口换取 openid
+     * 开发模式 (wechat.miniapp.mock=true) 下绕过微信 API
      */
     private String code2openid(String code) {
+        // 开发模式：绕过微信 API，生成 mock openid
+        if (wechatConfig.isMock()) {
+            // 开发模式使用固定 openid，避免每次登录都生成新用户
+            String mockOpenid = "dev_mock_openid_fixed";
+            log.info("[开发模式] 使用 Mock OpenID: {}", mockOpenid);
+            return mockOpenid;
+        }
+
         try {
             String url = String.format(WECHAT_CODE2SESSION_URL,
                     wechatConfig.getAppid(), wechatConfig.getSecret(), code);
@@ -117,14 +135,73 @@ public class AuthService {
         return user;
     }
 
+    /**
+     * 微信账号绑定PC管理号
+     * - 将微信用户的 openid 迁移到已有PC管理号上
+     * - 删除临时的微信用户记录
+     * - 绑定后以PC管理号的身份重新签发 Token
+     */
+    @Transactional
+    public Map<String, Object> bindWechatAccount(Long currentUserId, BindAccountRequest request) {
+        // 1. 查找当前微信用户
+        User wechatUser = userMapper.selectById(currentUserId);
+        if (wechatUser == null) {
+            throw new BusinessException(404, "用户不存在");
+        }
+        String openid = wechatUser.getWechatOpenid();
+        if (openid == null) {
+            throw new BusinessException(400, "该账号不是微信登录账号");
+        }
+
+        // 2. 验证PC端账号密码
+        User pcUser = userMapper.selectByUsername(request.getUsername());
+        if (pcUser == null) {
+            throw new BusinessException(401, "PC端用户名或密码错误");
+        }
+        if (pcUser.getStatus() != null && pcUser.getStatus() == 0) {
+            throw new BusinessException(403, "PC端账号已被禁用");
+        }
+        if (!passwordEncoder.matches(request.getPassword(), pcUser.getPassword())) {
+            throw new BusinessException(401, "PC端用户名或密码错误");
+        }
+
+        // 3. 检查PC账号是否已绑定微信
+        if (pcUser.getWechatOpenid() != null) {
+            throw new BusinessException(400, "该PC端账号已绑定过微信");
+        }
+
+        // 4. 检查不要绑定自己
+        if (wechatUser.getId().equals(pcUser.getId())) {
+            throw new BusinessException(400, "不能绑定当前账号自身");
+        }
+
+        // 5. 先删除临时微信用户，再迁移 openid（避免 wechat_openid 唯一约束冲突）
+        userMapper.deleteById(wechatUser.getId());
+
+        // 6. 将 openid 迁移到PC账号
+        pcUser.setWechatOpenid(openid);
+        // 如果PC账号没有昵称或昵称是默认的，使用微信昵称
+        if (pcUser.getNickname() == null || pcUser.getNickname().isEmpty()) {
+            pcUser.setNickname(wechatUser.getNickname());
+        }
+        userMapper.updateById(pcUser);
+
+        log.info("微信绑定成功: wechatUserId={}, pcUserId={}, openid={}",
+                wechatUser.getId(), pcUser.getId(), openid);
+
+        // 7. 用PC账号的身份生成新 Token
+        return buildLoginResult(pcUser);
+    }
+
     /** 构造登录返回结果 */
     private Map<String, Object> buildLoginResult(User user) {
         Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", user.getId());
         claims.put("username", user.getUsername());
         claims.put("nickname", user.getNickname());
         claims.put("role", user.getRole());
 
-        String token = JwtUtil.generateToken(claims);
+        String token = JwtUtil.generateToken(user.getId(), claims);
 
         Map<String, Object> result = new HashMap<>();
         result.put("token", token);

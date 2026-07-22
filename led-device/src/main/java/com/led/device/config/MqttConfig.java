@@ -45,7 +45,7 @@ public class MqttConfig {
     @Bean
     public MqttPahoMessageHandler mqttOutbound() {
         MqttPahoMessageHandler handler = new MqttPahoMessageHandler(clientId + "-out", mqttClientFactory());
-        handler.setAsync(true);
+        handler.setAsync(false);
         handler.setDefaultTopic(topicPrefix + "/command/#");
         return handler;
     }

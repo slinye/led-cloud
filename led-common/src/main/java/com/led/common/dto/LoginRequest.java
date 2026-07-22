@@ -10,4 +10,8 @@ public class LoginRequest {
     private String username;
     @NotBlank(message = "密码不能为空")
     private String password;
+    /** 验证码Key（可选，为空则跳过验证码校验） */
+    private String captchaKey;
+    /** 用户输入的验证码 */
+    private String captchaCode;
 }

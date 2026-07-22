@@ -1,9 +1,12 @@
 server:
   port: 9000
+  max-http-header-size: 1MB
 
 spring:
   application:
     name: led-gateway
+  codec:
+    max-in-memory-size: 500MB
   config:
     import: "optional:nacos:led-gateway.yml"
   cloud:
@@ -31,7 +34,7 @@ spring:
         - id: led-auth
           uri: lb://led-auth
           predicates:
-            - Path=/api/auth/**,/api/users/**
+            - Path=/api/auth/**,/api/users/**,/api/client/**
         # ---- 设备管理 ----
         - id: led-device
           uri: lb://led-device
@@ -48,7 +51,7 @@ spring:
         - id: led-schedule
           uri: lb://led-schedule
           predicates:
-            - Path=/api/programs/**,/api/playback/**,/api/batch/**,/api/dashboard/**,/api/play-logs/**,/api/logs/**,/api/settings/**
+            - Path=/api/programs/**,/api/playback/**,/api/batch/**,/api/dashboard/**,/api/play-logs/**,/api/logs/**,/api/settings/**,/api/schedules/**,/api/audit-logs/**,/api/alarms/**
       # 全局 CORS
       globalcors:
         cors-configurations:

@@ -15,7 +15,8 @@
     </el-card>
 
     <el-card style="margin-top: 16px;">
-      <el-table :data="tableData" v-loading="loading" stripe>
+      <el-table :data="tableData" v-loading="loading" stripe @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="45" />
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="name" label="名称" min-width="150" show-overflow-tooltip />
         <el-table-column prop="type" label="类型" width="90">
@@ -25,10 +26,20 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="fileUrl" label="文件" width="120">
+        <el-table-column label="预览" width="100">
           <template #default="{ row }">
-            <el-image v-if="row.fileUrl && row.type === 'image'" :src="getUploadUrl(row.fileUrl)" style="width: 60px; height: 40px; border-radius: 4px;" fit="cover" preview-teleported />
-            <span v-else-if="row.fileUrl" style="color: #409eff; cursor: pointer;" @click="previewFile(row)">{{ row.fileName || '查看文件' }}</span>
+            <el-image
+              v-if="row.filePath && row.type === 'image'"
+              :src="getUploadUrl(row.filePath)"
+              :preview-src-list="[getUploadUrl(row.filePath)]"
+              style="width: 60px; height: 40px; border-radius: 4px; cursor: pointer;"
+              fit="cover"
+              preview-teleported
+            />
+            <el-button v-else-if="row.filePath && row.type === 'video'" type="primary" text size="small" @click="previewVideo(row)">
+              <el-icon><VideoPlay /></el-icon>预览
+            </el-button>
+            <span v-else-if="row.type === 'text' && row.textContent" style="color:#606266;font-size:12px;max-width:80px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" :title="row.textContent">{{ row.textContent }}</span>
             <span v-else>-</span>
           </template>
         </el-table-column>
@@ -43,6 +54,9 @@
       </el-table>
 
       <div class="pagination-wrap">
+        <span v-if="selectedContents.length > 0" style="margin-right: auto;">
+          <el-button type="danger" size="small" @click="handleBatchDelete">批量删除 ({{ selectedContents.length }})</el-button>
+        </span>
         <el-pagination
           v-model:current-page="page"
           v-model:page-size="size"
@@ -74,12 +88,10 @@
             :on-change="handleFileChange"
             :file-list="fileList"
             list-type="picture"
-            accept="image/*,video/*"
+            :accept="form.type === 'video' ? 'video/*' : 'image/*'"
           >
             <el-button type="primary">选择文件</el-button>
-            <template #tip>
-              <div class="el-upload__tip">支持图片和视频文件</div>
-            </template>
+            <template #tip><div class="el-upload__tip">{{ form.type === 'video' ? '支持 mp4 等视频格式' : '支持 jpg/png 等图片格式' }}</div></template>
           </el-upload>
         </el-form-item>
         <el-form-item v-if="form.type === 'text'" label="文本内容">
@@ -106,14 +118,22 @@
         <el-button type="primary" :loading="submitting" @click="handleSubmit">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- 视频预览对话框 -->
+    <el-dialog v-model="videoVisible" title="视频预览" width="720px" destroy-on-close>
+      <div style="text-align: center;">
+        <video v-if="videoUrl" :src="videoUrl" controls autoplay style="max-width: 100%; max-height: 480px; border-radius: 8px;" />
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { VideoPlay } from '@element-plus/icons-vue'
 import { useAuthStore } from '../store/auth'
-import { getContents, createContent, updateContent, deleteContent } from '../api'
+import { getContents, createContent, updateContent, deleteContent, getContentReferences } from '../api'
 
 const auth = useAuthStore()
 
@@ -124,6 +144,11 @@ const loading = ref(false)
 const page = ref(1)
 const size = ref(10)
 const total = ref(0)
+const selectedContents = ref([])
+
+function handleSelectionChange(rows) {
+  selectedContents.value = rows
+}
 
 function getUploadUrl(url) {
   if (!url) return ''
@@ -145,8 +170,16 @@ async function loadData() {
 }
 
 function previewFile(row) {
-  const url = getUploadUrl(row.fileUrl)
-  window.open(url, '_blank')
+  window.open(getUploadUrl(row.filePath), '_blank')
+}
+
+// 视频预览
+const videoVisible = ref(false)
+const videoUrl = ref('')
+
+function previewVideo(row) {
+  videoUrl.value = getUploadUrl(row.filePath)
+  videoVisible.value = true
 }
 
 // ---- 新增/编辑 ----
@@ -159,14 +192,8 @@ const fileList = ref([])
 const selectedFile = ref(null)
 
 const form = reactive({
-  name: '',
-  type: 'image',
-  textContent: '',
-  fontSize: 24,
-  fontColor: '#ffffff',
-  backgroundColor: '#000000',
-  scrollSpeed: 5,
-  duration: 10
+  name: '', type: 'image', textContent: '',
+  fontSize: 24, fontColor: '#ffffff', backgroundColor: '#000000', scrollSpeed: 5, duration: 10
 })
 
 const rules = {
@@ -200,14 +227,10 @@ function handleEdit(row) {
   editingId.value = row.id
   dialogTitle.value = '编辑内容'
   Object.assign(form, {
-    name: row.name || '',
-    type: row.type || 'image',
-    textContent: row.textContent || '',
-    fontSize: row.fontSize || 24,
-    fontColor: row.fontColor || '#ffffff',
-    backgroundColor: row.backgroundColor || '#000000',
-    scrollSpeed: row.scrollSpeed || 5,
-    duration: row.duration || 10
+    name: row.name || '', type: row.type || 'image',
+    textContent: row.textContent || '', fontSize: row.fontSize || 24,
+    fontColor: row.fontColor || '#ffffff', backgroundColor: row.backgroundColor || '#000000',
+    scrollSpeed: row.scrollSpeed || 5, duration: row.duration || 10
   })
   selectedFile.value = null
   fileList.value = []
@@ -227,7 +250,7 @@ async function handleSubmit() {
       fd.append('textContent', form.textContent)
       fd.append('fontSize', form.fontSize)
       fd.append('fontColor', form.fontColor)
-      fd.append('backgroundColor', form.backgroundColor)
+      fd.append('bgColor', form.backgroundColor)
       fd.append('scrollSpeed', form.scrollSpeed)
     } else if (selectedFile.value) {
       fd.append('file', selectedFile.value)
@@ -244,11 +267,39 @@ async function handleSubmit() {
   } catch (e) { /* handled */ } finally { submitting.value = false }
 }
 
+// 删除时检查引用
 async function handleDelete(row) {
-  await ElMessageBox.confirm(`确定删除内容 "${row.name}" 吗？`, '确认删除', { type: 'warning' })
   try {
+    let confirmMsg = `确定删除内容 "${row.name}" 吗？`
+    try {
+      const refRes = await getContentReferences(row.id)
+      const refs = refRes?.data || refRes || []
+      if (refs && refs.length > 0) {
+        const names = refs.map(r => r.name || r).join('、')
+        confirmMsg = `内容 "${row.name}" 被以下节目引用：${names}\n\n删除后这些节目将无法正常播放。确定删除吗？`
+      }
+    } catch (e) { /* ignore ref check */ }
+
+    await ElMessageBox.confirm(confirmMsg, '确认删除', {
+      type: 'warning',
+      confirmButtonText: '确定删除',
+      confirmButtonClass: 'el-button--danger'
+    })
     await deleteContent(row.id)
     ElMessage.success('删除成功')
+    loadData()
+  } catch (e) { /* handled */ }
+}
+
+// 批量删除
+async function handleBatchDelete() {
+  const names = selectedContents.value.map(s => s.name).join('、')
+  await ElMessageBox.confirm(`确定删除以下 ${selectedContents.value.length} 个内容？\n${names}`, '批量删除', { type: 'warning' })
+  try {
+    for (const c of selectedContents.value) {
+      await deleteContent(c.id)
+    }
+    ElMessage.success('批量删除成功')
     loadData()
   } catch (e) { /* handled */ }
 }
@@ -267,6 +318,7 @@ onMounted(loadData)
 .pagination-wrap {
   margin-top: 16px;
   display: flex;
+  align-items: center;
   justify-content: flex-end;
 }
 </style>

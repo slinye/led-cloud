@@ -27,6 +27,17 @@ public class JwtUtil {
                 .compact();
     }
 
+    /** 生成Token（带用户ID） */
+    public static String generateToken(Long userId, Map<String, Object> claims) {
+        return Jwts.builder()
+                .setClaims(claims)
+                .setSubject(String.valueOf(userId))
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
+                .signWith(KEY, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
     /** 解析Token */
     public static Claims parseToken(String token) {
         try {

@@ -1,6 +1,7 @@
 package com.led.common.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import java.time.LocalDateTime;
 
@@ -19,6 +20,8 @@ public class Content {
     private String fontColor;
     private String bgColor;
     private Integer scrollSpeed;
+    private Integer duration;
+    @JsonProperty("createTime")
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
     @TableField(fill = FieldFill.INSERT_UPDATE)

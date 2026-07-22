@@ -1,6 +1,7 @@
 package com.led.common.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import java.time.LocalDateTime;
 
@@ -16,6 +17,7 @@ public class User {
     private Integer status;
     /** 微信小程序 openid */
     private String wechatOpenid;
+    @JsonProperty("createTime")
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
     @TableField(fill = FieldFill.INSERT_UPDATE)

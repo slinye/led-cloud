@@ -1,0 +1,15 @@
+# 服务器上
+scp docker-compose.prod.yml .env user@server:/opt/led-cloud/
+scp docker/mosquitto.conf docker/seata/ docker/nacos/ sql/ user@server:/opt/led-cloud/
+ssh user@server
+cd /opt/led-cloud
+
+# 如果有镜像仓库
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+
+# 如果没有镜像仓库 -- 在本地 build.sh 后导出镜像到服务器
+docker save led-cloud/led-gateway:latest ... | gzip > led-cloud-images.tar.gz
+# scp 到服务器
+docker load < led-cloud-images.tar.gz
+docker compose up -d

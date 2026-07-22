@@ -40,6 +40,16 @@ public class ScreenGroupService extends ServiceImpl<ScreenGroupMapper, ScreenGro
 
     @Transactional
     public void addScreens(Long groupId, List<Long> screenIds) {
+        if (screenIds == null || screenIds.isEmpty()) {
+            // 清空该分组的所有关联
+            relMapper.deleteByGroupId(groupId);
+            return;
+        }
+        // 1. 先从其他分组中移除这些屏幕（确保一屏只属于一个分组）
+        relMapper.deleteByScreenIds(screenIds);
+        // 2. 清空当前分组的所有旧关联（实现"替换"语义，匹配前端穿梭框行为）
+        relMapper.deleteByGroupId(groupId);
+        // 3. 插入新关联
         for (Long screenId : screenIds) {
             ScreenGroupRel rel = new ScreenGroupRel();
             rel.setGroupId(groupId);
@@ -50,5 +60,10 @@ public class ScreenGroupService extends ServiceImpl<ScreenGroupMapper, ScreenGro
 
     public List<ScreenGroupRel> getGroupScreens(Long groupId) {
         return relMapper.selectByGroupId(groupId);
+    }
+
+    /** 获取所有已被分组的屏幕ID（排除指定分组，用于过滤可选列表） */
+    public List<Long> getAssignedScreenIds(Long excludeGroupId) {
+        return relMapper.selectAssignedScreenIds(excludeGroupId);
     }
 }

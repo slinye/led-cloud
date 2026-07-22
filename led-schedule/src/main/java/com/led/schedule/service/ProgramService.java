@@ -19,6 +19,7 @@ import java.util.List;
 public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
 
     private final ProgramItemMapper programItemMapper;
+    private final ProgramPublishService programPublishService;
 
     public Page<Program> pagePrograms(int page, int size, String keyword) {
         LambdaQueryWrapper<Program> wrapper = new LambdaQueryWrapper<>();
@@ -58,11 +59,26 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
                 programItemMapper.insert(item);
             }
         }
+        // 如果创建时状态就是published，记录发布历史
+        if ("published".equals(program.getStatus())) {
+            Program withItems = getWithItems(program.getId());
+            programPublishService.createPublishRecord(withItems, "system", "create", null, true);
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void updateProgram(Program program, List<ProgramItem> items) {
-        if (getById(program.getId()) == null) throw new BusinessException(404, "节目不存在");
+        updateProgram(program, items, null);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void updateProgram(Program program, List<ProgramItem> items, String operator) {
+        Program existing = getById(program.getId());
+        if (existing == null) throw new BusinessException(404, "节目不存在");
+
+        boolean isPublishing = "published".equals(program.getStatus())
+                && !"published".equals(existing.getStatus());
+
         updateById(program);
         if (items != null) {
             programItemMapper.deleteByProgramId(program.getId());
@@ -74,6 +90,12 @@ public class ProgramService extends ServiceImpl<ProgramMapper, Program> {
                 if (item.getDuration() == null) item.setDuration(10);
                 programItemMapper.insert(item);
             }
+        }
+
+        if (isPublishing) {
+            Program withItems = getWithItems(program.getId());
+            programPublishService.createPublishRecord(withItems,
+                    operator != null ? operator : "system", "edit", null, true);
         }
     }
 

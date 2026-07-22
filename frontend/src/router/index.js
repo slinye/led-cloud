@@ -45,6 +45,12 @@ const router = createRouter({
           meta: { title: '节目管理', roles: ['admin', 'operator', 'viewer'] }
         },
         {
+          path: 'schedules',
+          name: 'Schedules',
+          component: () => import('../views/ScheduleManage.vue'),
+          meta: { title: '定时调度', roles: ['admin', 'operator'] }
+        },
+        {
           path: 'users',
           name: 'Users',
           component: () => import('../views/UserManage.vue'),
@@ -57,10 +63,28 @@ const router = createRouter({
           meta: { title: '播放日志', roles: ['admin', 'operator', 'viewer'] }
         },
         {
+          path: 'alarm-config',
+          name: 'AlarmConfig',
+          component: () => import('../views/AlarmConfig.vue'),
+          meta: { title: '告警配置', roles: ['admin'] }
+        },
+        {
+          path: 'alarm-records',
+          name: 'AlarmRecords',
+          component: () => import('../views/AlarmRecords.vue'),
+          meta: { title: '告警记录', roles: ['admin', 'operator'] }
+        },
+        {
           path: 'settings',
           name: 'Settings',
           component: () => import('../views/Settings.vue'),
           meta: { title: '系统设置', roles: ['admin'] }
+        },
+        {
+          path: 'audit-logs',
+          name: 'AuditLogs',
+          component: () => import('../views/AuditLogManage.vue'),
+          meta: { title: '审计日志', roles: ['admin'] }
         }
       ]
     },

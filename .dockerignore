@@ -1,24 +1,56 @@
-# Maven
-target/
-*.class
-*.jar
-*.war
+# ============================================
+# LED Cloud - Docker 构建上下文忽略文件
+# 缩小 docker build 上下文，加速构建
+# ============================================
 
-# IDE
+# === IDE ===
 .idea/
-*.iml
 .vscode/
-.classpath
-.project
-.settings/
+*.iml
+*.iws
+*.ipr
 
-# Git
+# === Git ===
 .git/
 .gitignore
 
-# OS
+# === Maven (本地编译产物不入镜像) ===
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# === Node (前端编译产物不入镜像，多阶段构建) ===
+node_modules/
+dist/
+
+# === 环境变量 (敏感信息) ===
+.env
+.env.local
+.env.prod
+
+# === 日志 ===
+*.log
+logs/
+
+# === 临时文件 ===
+*.tmp
+*.bak
+*.swp
+*~
 .DS_Store
 Thumbs.db
 
-# Logs
-*.log
+# === 文档 ===
+*.md
+!README.md
+docs/
+
+# === CI/CD ===
+Jenkinsfile
+.ci/
+
+# === 小程序 (不在 Docker 构建范围) ===
+miniapp/
+
+# === 容器数据 (本地测试残留) ===
+data/
+volumes/

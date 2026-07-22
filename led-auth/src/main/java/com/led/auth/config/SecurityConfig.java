@@ -44,7 +44,7 @@ public class SecurityConfig {
             .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             .and()
             .authorizeRequests()
-            .antMatchers("/api/auth/login", "/api/auth/verify",
+            .antMatchers("/api/auth/login", "/api/auth/verify", "/api/auth/captcha",
                     "/api/client/**",
                     "/doc.html", "/webjars/**", "/swagger-resources/**", "/v2/api-docs/**").permitAll()
             .anyRequest().authenticated()

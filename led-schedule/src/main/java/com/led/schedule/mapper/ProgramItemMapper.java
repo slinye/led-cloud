@@ -5,6 +5,7 @@ import com.led.common.entity.ProgramItem;
 import org.apache.ibatis.annotations.*;
 
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface ProgramItemMapper extends BaseMapper<ProgramItem> {
@@ -17,4 +18,15 @@ public interface ProgramItemMapper extends BaseMapper<ProgramItem> {
 
     @Delete("DELETE FROM t_program_item WHERE program_id = #{programId}")
     void deleteByProgramId(Long programId);
+
+    /** 查询引用指定内容的所有节目 */
+    @Select("SELECT DISTINCT p.id, p.name, pi.sort_order, pi.duration " +
+            "FROM t_program_item pi " +
+            "JOIN t_program p ON pi.program_id = p.id " +
+            "WHERE pi.content_id = #{contentId}")
+    List<Map<String, Object>> selectReferencingPrograms(@Param("contentId") Long contentId);
+
+    /** 判断是否有节目引用了某内容 */
+    @Select("SELECT COUNT(*) > 0 FROM t_program_item WHERE content_id = #{contentId}")
+    boolean existsByContentId(@Param("contentId") Long contentId);
 }

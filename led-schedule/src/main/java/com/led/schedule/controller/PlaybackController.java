@@ -1,22 +1,29 @@
 package com.led.schedule.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.led.common.annotation.AuditLog;
 import com.led.common.dto.R;
 import com.led.common.entity.*;
 import com.led.schedule.feign.DeviceFeignClient;
 import com.led.schedule.mapper.ProgramItemMapper;
+import com.led.schedule.mapper.ScreenMapper;
 import com.led.schedule.service.PlayLogService;
+import com.led.schedule.service.ProgramPublishService;
 import com.led.schedule.service.ProgramService;
 import com.led.schedule.dto.PlaybackRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/playback")
 @RequiredArgsConstructor
@@ -25,8 +32,12 @@ public class PlaybackController {
 
     private final ProgramService programService;
     private final PlayLogService playLogService;
+    private final ProgramPublishService programPublishService;
     private final ProgramItemMapper programItemMapper;
     private final DeviceFeignClient deviceFeignClient;
+    private final ScreenMapper screenMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
 
     /** 开始播放节目到指定屏幕 */
     @PostMapping("/start/{programId}")
@@ -38,9 +49,16 @@ public class PlaybackController {
         List<ProgramItem> items = programItemMapper.selectByProgramId(programId);
         String itemsJson = toJsonArray(items);
 
+        boolean hasError = false;
+        List<Map<String, Object>> targets = new ArrayList<>();
         for (Long screenId : request.getScreenIds()) {
+            Map<String, Object> target = new HashMap<>();
+            target.put("id", screenId);
+            target.put("name", getMqttClientId(screenId));
+            targets.add(target);
             try {
                 String mqttClientId = getMqttClientId(screenId);
+                if (mqttClientId == null) continue;
                 Map<String, Object> cmd = new HashMap<>();
                 cmd.put("type", "play");
                 cmd.put("mqttClientId", mqttClientId);
@@ -49,8 +67,15 @@ public class PlaybackController {
                 deviceFeignClient.sendMqttCommand(cmd);
                 saveLog(screenId, programId, "play", "播放节目: " + program.getName());
             } catch (Exception e) {
+                hasError = true;
                 saveLog(screenId, programId, "play_error", "播放失败: " + e.getMessage());
             }
+        }
+        // 记录发布历史
+        try {
+            programPublishService.createPublishRecord(program, getCurrentUsername(), "play", targets, !hasError);
+        } catch (Exception e) {
+            // 发布历史记录失败不影响播放
         }
         return R.okMsg("播放指令已下发");
     }
@@ -61,9 +86,11 @@ public class PlaybackController {
     public R<Void> stopPlay(@PathVariable Long programId, @RequestBody PlaybackRequest request) {
         for (Long screenId : request.getScreenIds()) {
             try {
+                String mqttClientId = getMqttClientId(screenId);
+                if (mqttClientId == null) continue;
                 Map<String, Object> cmd = new HashMap<>();
                 cmd.put("type", "stop");
-                cmd.put("mqttClientId", getMqttClientId(screenId));
+                cmd.put("mqttClientId", mqttClientId);
                 deviceFeignClient.sendMqttCommand(cmd);
                 saveLog(screenId, programId, "stop", "停止播放");
             } catch (Exception ignored) {}
@@ -77,6 +104,9 @@ public class PlaybackController {
     public R<Void> control(@PathVariable Long screenId, @RequestBody Map<String, Object> params) {
         String action = (String) params.get("action");
         String mqttClientId = getMqttClientId(screenId);
+        if (mqttClientId == null) {
+            return R.fail(400, "设备未注册，无 MQTT ClientId");
+        }
 
         Map<String, Object> cmd = new HashMap<>();
         cmd.put("mqttClientId", mqttClientId);
@@ -104,9 +134,23 @@ public class PlaybackController {
         return R.okMsg("控制指令已下发");
     }
 
+    /** 从数据库获取设备的真实 mqttClientId（2开头的8位数字） */
     private String getMqttClientId(Long screenId) {
-        // 这里简化处理，实际应通过Feign调用led-device获取
-        return "SCREEN-" + String.format("%03d", screenId);
+        Screen screen = screenMapper.selectById(screenId);
+        if (screen == null || screen.getMqttClientId() == null || screen.getMqttClientId().isEmpty()) {
+            log.warn("[播放控制] 屏幕 {} 未注册或无 mqttClientId，跳过下发", screenId);
+            return null;
+        }
+        return screen.getMqttClientId();
+    }
+
+    private String getCurrentUsername() {
+        try {
+            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            return principal != null ? principal.toString() : "system";
+        } catch (Exception e) {
+            return "system";
+        }
     }
 
     private void saveLog(Long screenId, Long programId, String action, String message) {
@@ -121,15 +165,27 @@ public class PlaybackController {
 
     private String toJsonArray(List<ProgramItem> items) {
         if (items == null || items.isEmpty()) return "[]";
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < items.size(); i++) {
-            if (i > 0) sb.append(",");
-            ProgramItem item = items.get(i);
-            sb.append(String.format("{\"contentId\":%d,\"sortOrder\":%d,\"duration\":%d,\"contentName\":\"%s\"}",
-                    item.getContentId(), item.getSortOrder(), item.getDuration(),
-                    item.getContentName() != null ? item.getContentName() : ""));
+        List<Map<String, Object>> list = new ArrayList<>(items.size());
+        for (ProgramItem item : items) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("contentId", item.getContentId());
+            map.put("sortOrder", item.getSortOrder());
+            map.put("duration", item.getDuration());
+            map.put("contentName", item.getContentName());
+            map.put("contentType", item.getContentType());
+            map.put("filePath", item.getFilePath());
+            map.put("textContent", item.getTextContent());
+            map.put("fontSize", item.getFontSize());
+            map.put("fontColor", item.getFontColor());
+            map.put("bgColor", item.getBgColor());
+            map.put("scrollSpeed", item.getScrollSpeed());
+            list.add(map);
         }
-        sb.append("]");
-        return sb.toString();
+        try {
+            return objectMapper.writeValueAsString(list);
+        } catch (Exception e) {
+            throw new RuntimeException("序列化节目项失败", e);
+        }
     }
+
 }

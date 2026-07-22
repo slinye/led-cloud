@@ -10,6 +10,17 @@
         <el-form-item prop="password">
           <el-input v-model="form.password" type="password" placeholder="密码" :prefix-icon="Lock" show-password @keyup.enter="handleLogin" />
         </el-form-item>
+        <el-form-item prop="captchaCode">
+          <div class="captcha-row">
+            <el-input v-model="form.captchaCode" placeholder="验证码" style="flex:1;" @keyup.enter="handleLogin" />
+            <img :src="captchaImage" class="captcha-img" title="点击刷新验证码" @click="refreshCaptcha" />
+          </div>
+        </el-form-item>
+        <el-form-item>
+          <div class="login-extra">
+            <el-checkbox v-model="rememberPwd">记住密码</el-checkbox>
+          </div>
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" :loading="loading" style="width: 100%;" @click="handleLogin">
             登 录
@@ -27,26 +38,56 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { User, Lock } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { login } from '../api'
+import { login, getCaptcha } from '../api'
 import { useAuthStore } from '../store/auth'
 
 const router = useRouter()
 const auth = useAuthStore()
 const formRef = ref(null)
 const loading = ref(false)
+const rememberPwd = ref(false)
+const captchaImage = ref('')
+const captchaKey = ref('')
 
 const form = reactive({
   username: '',
-  password: ''
+  password: '',
+  captchaCode: ''
 })
 
 const rules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+  captchaCode: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
+}
+
+onMounted(() => {
+  // 记住密码
+  const saved = localStorage.getItem('rememberedUser')
+  if (saved) {
+    try {
+      const { username, password } = JSON.parse(saved)
+      form.username = username
+      form.password = password
+      rememberPwd.value = true
+    } catch (e) { /* ignore */ }
+  }
+  refreshCaptcha()
+})
+
+async function refreshCaptcha() {
+  try {
+    const res = await getCaptcha()
+    captchaImage.value = res.data.captchaImage
+    captchaKey.value = res.data.captchaKey
+    form.captchaCode = ''
+  } catch (e) {
+    // 忽略
+  }
 }
 
 async function handleLogin() {
@@ -54,12 +95,27 @@ async function handleLogin() {
   if (!valid) return
   loading.value = true
   try {
-    const res = await login(form)
+    const loginData = {
+      username: form.username,
+      password: form.password,
+      captchaKey: captchaKey.value,
+      captchaCode: form.captchaCode
+    }
+    const res = await login(loginData)
     auth.loginSuccess(res)
+
+    // 记住密码
+    if (rememberPwd.value) {
+      localStorage.setItem('rememberedUser', JSON.stringify({ username: form.username, password: form.password }))
+    } else {
+      localStorage.removeItem('rememberedUser')
+    }
+
     ElMessage.success('登录成功')
     router.push('/dashboard')
   } catch (e) {
-    // 错误已在拦截器中处理
+    // 验证码错误后刷新
+    refreshCaptcha()
   } finally {
     loading.value = false
   }
@@ -100,6 +156,31 @@ function fillAccount(username, password) {
   margin-bottom: 30px;
   color: #999;
   font-size: 14px;
+}
+
+.login-extra {
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.captcha-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.captcha-img {
+  height: 40px;
+  width: 120px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid #dcdfe6;
+  flex-shrink: 0;
+}
+
+.captcha-img:hover {
+  border-color: #409eff;
 }
 
 .demo-accounts {

@@ -46,6 +46,9 @@ public class ContentService extends ServiceImpl<ContentMapper, Content> {
         if (file != null && !file.isEmpty()) {
             saveUploadFile(content, file);
         }
+        if (content.getDuration() == null) {
+            content.setDuration(10);
+        }
         save(content);
         return content;
     }
@@ -65,6 +68,9 @@ public class ContentService extends ServiceImpl<ContentMapper, Content> {
             content.setFilePath(existing.getFilePath());
             content.setFileSize(existing.getFileSize());
             content.setThumbnailPath(existing.getThumbnailPath());
+        }
+        if (content.getDuration() == null) {
+            content.setDuration(existing.getDuration());
         }
         updateById(content);
         return content;

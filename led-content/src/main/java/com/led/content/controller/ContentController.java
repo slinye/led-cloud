@@ -7,12 +7,14 @@ import com.led.common.entity.Content;
 import com.led.content.service.ContentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -21,6 +23,7 @@ import java.util.List;
 public class ContentController {
 
     private final ContentService contentService;
+    private final JdbcTemplate jdbcTemplate;
 
     /** 分页查询 */
     @GetMapping
@@ -46,6 +49,15 @@ public class ContentController {
         return R.ok(contentService.getById(id));
     }
 
+    /** 查询内容被哪些节目引用 */
+    @GetMapping("/{id}/references")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATOR','VIEWER')")
+    public R<List<Map<String, Object>>> references(@PathVariable Long id) {
+        String sql = "SELECT DISTINCT p.id, p.name FROM t_program_item pi " +
+                     "JOIN t_program p ON pi.program_id = p.id WHERE pi.content_id = ?";
+        return R.ok(jdbcTemplate.queryForList(sql, id));
+    }
+
     /** 创建内容（含文件上传） */
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','OPERATOR')")
@@ -53,6 +65,7 @@ public class ContentController {
     public R<Content> create(@RequestParam(value = "file", required = false) MultipartFile file,
                              @RequestParam("name") String name,
                              @RequestParam("type") String type,
+                             @RequestParam(value = "duration", required = false) Integer duration,
                              @RequestParam(value = "textContent", required = false) String textContent,
                              @RequestParam(value = "fontSize", required = false) Integer fontSize,
                              @RequestParam(value = "fontColor", required = false) String fontColor,
@@ -61,6 +74,7 @@ public class ContentController {
         Content content = new Content();
         content.setName(name);
         content.setType(type);
+        content.setDuration(duration);
         content.setTextContent(textContent);
         content.setFontSize(fontSize);
         content.setFontColor(fontColor);
@@ -77,6 +91,7 @@ public class ContentController {
                              @RequestParam(value = "file", required = false) MultipartFile file,
                              @RequestParam("name") String name,
                              @RequestParam("type") String type,
+                             @RequestParam(value = "duration", required = false) Integer duration,
                              @RequestParam(value = "textContent", required = false) String textContent,
                              @RequestParam(value = "fontSize", required = false) Integer fontSize,
                              @RequestParam(value = "fontColor", required = false) String fontColor,
@@ -86,6 +101,7 @@ public class ContentController {
         content.setId(id);
         content.setName(name);
         content.setType(type);
+        content.setDuration(duration);
         content.setTextContent(textContent);
         content.setFontSize(fontSize);
         content.setFontColor(fontColor);
@@ -101,5 +117,20 @@ public class ContentController {
     public R<Void> delete(@PathVariable Long id) {
         contentService.deleteContent(id);
         return R.okMsg("删除成功");
+    }
+
+    /** 批量删除 */
+    @PostMapping("/batch-delete")
+    @PreAuthorize("hasRole('ADMIN')")
+    @AuditLog(module = "内容管理", action = "BATCH_DELETE", description = "批量删除内容")
+    public R<Void> batchDelete(@RequestBody Map<String, Object> params) {
+        @SuppressWarnings("unchecked")
+        List<Integer> ids = (List<Integer>) params.get("ids");
+        if (ids != null) {
+            for (Integer id : ids) {
+                contentService.deleteContent(id.longValue());
+            }
+        }
+        return R.okMsg("批量删除成功");
     }
 }

@@ -1,6 +1,7 @@
 package com.led.common.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,6 +17,7 @@ public class Program {
     private String scheduleType;
     private LocalDateTime scheduleTime;
     private LocalDateTime scheduleEndTime;
+    @JsonProperty("createTime")
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
     @TableField(fill = FieldFill.INSERT_UPDATE)

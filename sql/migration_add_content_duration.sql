@@ -1,0 +1,1 @@
+ALTER TABLE t_content ADD COLUMN duration INT DEFAULT 10 AFTER scroll_speed;

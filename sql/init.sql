@@ -92,6 +92,18 @@ CREATE TABLE IF NOT EXISTS t_play_log (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 节目发布记录表
+CREATE TABLE IF NOT EXISTS t_program_publish (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    program_id BIGINT NOT NULL COMMENT '节目ID',
+    version INT DEFAULT 1 COMMENT '发布版本号',
+    snapshot JSON COMMENT '发布时节目快照(名称+素材列表)',
+    operator VARCHAR(50) COMMENT '发布人',
+    remark VARCHAR(255) COMMENT '发布备注',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_program_id (program_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- 系统设置表
 CREATE TABLE IF NOT EXISTS t_setting (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -129,11 +141,26 @@ CREATE TABLE IF NOT EXISTS t_screen_group (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 告警记录表
+CREATE TABLE IF NOT EXISTS t_alarm_record (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    alarm_type VARCHAR(30) NOT NULL COMMENT '告警类型: offline/play_fail/disk',
+    screen_id BIGINT COMMENT '关联屏幕ID',
+    screen_name VARCHAR(100) COMMENT '屏幕名称',
+    title VARCHAR(200) NOT NULL COMMENT '告警标题',
+    message VARCHAR(500) COMMENT '告警详情',
+    status VARCHAR(20) DEFAULT 'unread' COMMENT '状态: unread/read',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_alarm_type (alarm_type),
+    INDEX idx_status (status),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- 屏幕-分组关联表
 CREATE TABLE IF NOT EXISTS t_screen_group_rel (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     group_id BIGINT NOT NULL,
-    screen_id BIGINT NOT NULL,
+    screen_id BIGINT NOT NULL UNIQUE,
     FOREIGN KEY (group_id) REFERENCES t_screen_group(id) ON DELETE CASCADE,
     FOREIGN KEY (screen_id) REFERENCES t_screen(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -142,14 +169,14 @@ CREATE TABLE IF NOT EXISTS t_screen_group_rel (
 INSERT IGNORE INTO t_user (username, password, nickname, role, status) VALUES
 ('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '管理员', 'ADMIN', 1);
 
--- 初始化示例屏幕
+-- 初始化示例屏幕 (设备ID: 2开头的8位阿拉伯数字)
 INSERT IGNORE INTO t_screen (id, name, ip_address, status, mqtt_client_id) VALUES
-(1, '展厅主屏', '192.168.1.100', 'offline', 'SCREEN-001'),
-(2, '走廊屏-2号', '192.168.1.101', 'offline', 'SCREEN-002'),
-(3, '走廊屏-3号', '192.168.1.102', 'offline', 'SCREEN-003'),
-(4, '大厅屏-1号', '192.168.1.103', 'offline', 'SCREEN-004'),
-(5, '大厅屏-2号', '192.168.1.104', 'offline', 'SCREEN-005'),
-(6, '会议室屏', '192.168.1.105', 'offline', 'SCREEN-006');
+(1, '展厅主屏',     '192.168.1.100', 'offline', '20000001'),
+(2, '走廊屏-2号',   '192.168.1.101', 'offline', '20000002'),
+(3, '走廊屏-3号',   '192.168.1.102', 'offline', '20000003'),
+(4, '大厅屏-1号',   '192.168.1.103', 'offline', '20000004'),
+(5, '大厅屏-2号',   '192.168.1.104', 'offline', '20000005'),
+(6, '会议室屏',     '192.168.1.105', 'offline', '20000006');
 
 -- =============================================
 -- Seata 分布式事务所需表

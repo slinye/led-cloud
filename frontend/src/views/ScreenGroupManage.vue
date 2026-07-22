@@ -14,6 +14,15 @@
         <el-table-column prop="id" label="ID" width="70" />
         <el-table-column prop="name" label="分组名称" min-width="160" show-overflow-tooltip />
         <el-table-column prop="screenCount" label="屏幕数量" width="100" />
+        <el-table-column label="在线 / 离线 / 播放中" width="200">
+          <template #default="{ row }">
+            <div class="status-bars">
+              <el-tag type="success" size="small" effect="plain">{{ row.onlineCount || 0 }} 在线</el-tag>
+              <el-tag type="info" size="small" effect="plain">{{ row.offlineCount || 0 }} 离线</el-tag>
+              <el-tag type="warning" size="small" effect="plain">{{ row.playingCount || 0 }} 播放中</el-tag>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
         <el-table-column prop="createTime" label="创建时间" width="170" />
         <el-table-column label="操作" width="280" fixed="right">
@@ -85,9 +94,8 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '../store/auth'
 import { getScreensAll } from '../api'
-import { getProgramsAll } from '../api'
-import { batchDeployProgram } from '../api'
-import { getScreenGroups, createScreenGroup, updateScreenGroup, deleteScreenGroup, addScreenToGroup, getGroupScreens } from '../api'
+import { getProgramsAll, batchDeployProgram } from '../api'
+import { getScreenGroups, createScreenGroup, updateScreenGroup, deleteScreenGroup, addScreenToGroup, getGroupScreens, getGroupStatus, getAssignedScreenIds } from '../api'
 
 const auth = useAuthStore()
 
@@ -102,8 +110,34 @@ async function loadData() {
     if (keyword.value) params.keyword = keyword.value
     const res = await getScreenGroups(params)
     const data = res && res.code === 200 ? res.data : res
-    tableData.value = data?.records || data || []
-  } catch (e) { /* handled */ } finally { loading.value = false }
+    const groups = data?.records || data || []
+    console.log('[ScreenGroup] groups from API:', groups)
+
+    let statusMap = {}
+    try {
+      const statusRes = await getGroupStatus()
+      console.log('[ScreenGroup] groupStatus:', statusRes)
+      if (statusRes?.data) {
+        (statusRes.data || []).forEach(s => {
+          statusMap[s.groupId] = { online: s.online || 0, playing: s.playing || 0, total: s.total || 0 }
+        })
+      }
+      console.log('[ScreenGroup] statusMap:', statusMap)
+    } catch (e) { console.error('[ScreenGroup] loadStatus error:', e) }
+
+    // 显式创建新对象，确保 Vue 表格能检测到字段变化
+    const merged = groups.map(g => {
+      const s = statusMap[g.id]
+      const screenCount = s ? s.total : (g.screenCount || 0)
+      const onlineCount = s ? s.online : 0
+      const playingCount = s ? s.playing : 0
+      const offlineCount = s ? (s.total - s.online) : screenCount
+      return { ...g, screenCount, onlineCount, playingCount, offlineCount }
+    })
+
+    console.log('[ScreenGroup] final tableData:', merged)
+    tableData.value = merged
+  } catch (e) { console.error('[ScreenGroup] loadData error:', e) } finally { loading.value = false }
 }
 
 // ---- 新增/编辑 ----
@@ -114,7 +148,6 @@ const editingId = ref(null)
 const submitting = ref(false)
 
 const form = reactive({ name: '', description: '' })
-
 const rules = { name: [{ required: true, message: '请输入分组名称', trigger: 'blur' }] }
 
 function handleAdd() {
@@ -167,24 +200,39 @@ const savingScreens = ref(false)
 async function handleManageScreens(row) {
   currentGroup.value = row
   try {
-    const screenRes = await getScreensAll()
+    const [screenRes, assignedRes] = await Promise.all([
+      getScreensAll(),
+      getAssignedScreenIds(row.id)
+    ])
     const screens = screenRes && screenRes.code === 200 ? (screenRes.data || []) : (screenRes || [])
-    allScreenOptions.value = screens.map(s => ({ key: s.id, label: s.name + ' (' + (s.ipAddress || '') + ')' }))
+    const assignedIds = new Set(assignedRes && assignedRes.code === 200 ? (assignedRes.data || []) : (assignedRes || []))
+    console.log('[ScreenGroup] assignedScreenIds (exclude current group):', assignedIds)
+
+    // 过滤：未被其他分组关联的屏幕才进入可选列表
+    const available = screens.filter(s => !assignedIds.has(s.id))
+    allScreenOptions.value = available.map(s => ({ key: s.id, label: s.name + ' (' + (s.ipAddress || '') + ')' }))
+
     const groupRes = await getGroupScreens(row.id)
     const groupScreens = groupRes && groupRes.code === 200 ? (groupRes.data || []) : (groupRes || [])
-    selectedScreens.value = groupScreens.map(s => s.id)
-  } catch (e) { /* handled */ }
+    console.log('[ScreenGroup] current groupScreens:', groupScreens)
+    selectedScreens.value = groupScreens.map(s => s.screenId)
+    console.log('[ScreenGroup] selectedScreens:', selectedScreens.value)
+    console.log('[ScreenGroup] allScreenOptions:', allScreenOptions.value)
+  } catch (e) { console.error('[ScreenGroup] manageScreens error:', e); ElMessage.error('加载屏幕列表失败') }
   screenDialogVisible.value = true
 }
 
 async function handleSaveScreens() {
   savingScreens.value = true
   try {
-    await addScreenToGroup(currentGroup.value.id, { screenIds: selectedScreens.value })
+    const payload = { screenIds: selectedScreens.value }
+    console.log('[ScreenGroup] saving screens:', { groupId: currentGroup.value.id, payload })
+    const res = await addScreenToGroup(currentGroup.value.id, payload)
+    console.log('[ScreenGroup] save result:', res)
     ElMessage.success('屏幕关联更新成功')
     screenDialogVisible.value = false
     loadData()
-  } catch (e) { /* handled */ } finally { savingScreens.value = false }
+  } catch (e) { console.error('[ScreenGroup] saveScreens error:', e) } finally { savingScreens.value = false }
 }
 
 // ---- 批量下发 ----
@@ -214,12 +262,8 @@ async function handleDeploy() {
   try {
     const screenRes = await getGroupScreens(deployGroupId.value)
     const groupScreens = screenRes?.data || screenRes || []
-    const screenIds = groupScreens.map(s => s.id)
-    await batchDeployProgram({
-      screenIds,
-      programId: deployProgramId.value,
-      action: deployAction.value
-    })
+    const screenIds = groupScreens.map(s => s.screenId)
+    await batchDeployProgram({ screenIds, programId: deployProgramId.value, action: deployAction.value })
     ElMessage.success('批量下发成功')
     deployDialogVisible.value = false
   } catch (e) { /* handled */ } finally { deploying.value = false }
@@ -232,5 +276,11 @@ onMounted(loadData)
 .toolbar {
   display: flex;
   align-items: center;
+}
+
+.status-bars {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
 }
 </style>
