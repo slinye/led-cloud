@@ -1,0 +1,1 @@
+UPDATE t_content SET duration = 10 WHERE duration IS NULL;

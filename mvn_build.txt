@@ -1,0 +1,255 @@
+[INFO] Scanning for projects...
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Build Order:
+[INFO] 
+[INFO] LED Cloud - Microservices Parent                                   [pom]
+[INFO] LED Common Module                                                  [jar]
+[INFO] LED API Gateway                                                    [jar]
+[INFO] LED Auth Service - Authentication Center                           [jar]
+[INFO] LED Device Service - Device Management                             [jar]
+[INFO] LED Content Service - Content Management                           [jar]
+[INFO] LED Schedule Service - Program & Playback Scheduling               [jar]
+[INFO] 
+[INFO] -------------------------< com.led:led-cloud >--------------------------
+[INFO] Building LED Cloud - Microservices Parent 1.0.0                    [1/7]
+[INFO]   from pom.xml
+[INFO] --------------------------------[ pom ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.2.0:clean (default-clean) @ led-cloud ---
+[INFO] 
+[INFO] --- spring-boot:2.7.18:repackage (repackage) @ led-cloud ---
+[INFO] 
+[INFO] -------------------------< com.led:led-common >-------------------------
+[INFO] Building LED Common Module 1.0.0                                   [2/7]
+[INFO]   from led-common\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.2.0:clean (default-clean) @ led-common ---
+[INFO] Deleting F:\work\led-cloud\led-common\target
+[INFO] 
+[INFO] --- resources:3.2.0:resources (default-resources) @ led-common ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Using 'UTF-8' encoding to copy filtered properties files.
+[INFO] skip non existing resourceDirectory F:\work\led-cloud\led-common\src\main\resources
+[INFO] skip non existing resourceDirectory F:\work\led-cloud\led-common\src\main\resources
+[INFO] 
+[INFO] --- compiler:3.10.1:compile (default-compile) @ led-common ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 24 source files to F:\work\led-cloud\led-common\target\classes
+[INFO] 
+[INFO] --- resources:3.2.0:testResources (default-testResources) @ led-common ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Using 'UTF-8' encoding to copy filtered properties files.
+[INFO] skip non existing resourceDirectory F:\work\led-cloud\led-common\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.10.1:testCompile (default-testCompile) @ led-common ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- surefire:2.22.2:test (default-test) @ led-common ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.2.2:jar (default-jar) @ led-common ---
+[INFO] Building jar: F:\work\led-cloud\led-common\target\led-common-1.0.0.jar
+[INFO] 
+[INFO] --- spring-boot:2.7.18:repackage (repackage) @ led-common ---
+[INFO] 
+[INFO] ------------------------< com.led:led-gateway >-------------------------
+[INFO] Building LED API Gateway 1.0.0                                     [3/7]
+[INFO]   from led-gateway\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.2.0:clean (default-clean) @ led-gateway ---
+[INFO] Deleting F:\work\led-cloud\led-gateway\target
+[INFO] 
+[INFO] --- resources:3.2.0:resources (default-resources) @ led-gateway ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Using 'UTF-8' encoding to copy filtered properties files.
+[INFO] Copying 1 resource
+[INFO] Copying 0 resource
+[INFO] 
+[INFO] --- compiler:3.10.1:compile (default-compile) @ led-gateway ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 4 source files to F:\work\led-cloud\led-gateway\target\classes
+[INFO] 
+[INFO] --- resources:3.2.0:testResources (default-testResources) @ led-gateway ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Using 'UTF-8' encoding to copy filtered properties files.
+[INFO] skip non existing resourceDirectory F:\work\led-cloud\led-gateway\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.10.1:testCompile (default-testCompile) @ led-gateway ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- surefire:2.22.2:test (default-test) @ led-gateway ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.2.2:jar (default-jar) @ led-gateway ---
+[INFO] Building jar: F:\work\led-cloud\led-gateway\target\led-gateway-1.0.0.jar
+[INFO] 
+[INFO] --- spring-boot:2.7.18:repackage (repackage) @ led-gateway ---
+[INFO] Replacing main artifact with repackaged archive
+[INFO] 
+[INFO] --------------------------< com.led:led-auth >--------------------------
+[INFO] Building LED Auth Service - Authentication Center 1.0.0            [4/7]
+[INFO]   from led-auth\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[WARNING] The artifact mysql:mysql-connector-java:jar:8.0.33 has been relocated to com.mysql:mysql-connector-j:jar:8.0.33: MySQL Connector/J artifacts moved to reverse-DNS compliant Maven 2+ coordinates.
+[INFO] 
+[INFO] --- clean:3.2.0:clean (default-clean) @ led-auth ---
+[INFO] Deleting F:\work\led-cloud\led-auth\target
+[INFO] 
+[INFO] --- resources:3.2.0:resources (default-resources) @ led-auth ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Using 'UTF-8' encoding to copy filtered properties files.
+[INFO] Copying 1 resource
+[INFO] Copying 0 resource
+[INFO] 
+[INFO] --- compiler:3.10.1:compile (default-compile) @ led-auth ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 10 source files to F:\work\led-cloud\led-auth\target\classes
+[INFO] 
+[INFO] --- resources:3.2.0:testResources (default-testResources) @ led-auth ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Using 'UTF-8' encoding to copy filtered properties files.
+[INFO] skip non existing resourceDirectory F:\work\led-cloud\led-auth\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.10.1:testCompile (default-testCompile) @ led-auth ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- surefire:2.22.2:test (default-test) @ led-auth ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.2.2:jar (default-jar) @ led-auth ---
+[INFO] Building jar: F:\work\led-cloud\led-auth\target\led-auth-1.0.0.jar
+[INFO] 
+[INFO] --- spring-boot:2.7.18:repackage (repackage) @ led-auth ---
+[INFO] Replacing main artifact with repackaged archive
+[INFO] 
+[INFO] -------------------------< com.led:led-device >-------------------------
+[INFO] Building LED Device Service - Device Management 1.0.0              [5/7]
+[INFO]   from led-device\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[WARNING] The artifact mysql:mysql-connector-java:jar:8.0.33 has been relocated to com.mysql:mysql-connector-j:jar:8.0.33: MySQL Connector/J artifacts moved to reverse-DNS compliant Maven 2+ coordinates.
+[INFO] 
+[INFO] --- clean:3.2.0:clean (default-clean) @ led-device ---
+[INFO] Deleting F:\work\led-cloud\led-device\target
+[INFO] 
+[INFO] --- resources:3.2.0:resources (default-resources) @ led-device ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Using 'UTF-8' encoding to copy filtered properties files.
+[INFO] Copying 1 resource
+[INFO] Copying 0 resource
+[INFO] 
+[INFO] --- compiler:3.10.1:compile (default-compile) @ led-device ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 17 source files to F:\work\led-cloud\led-device\target\classes
+[INFO] 
+[INFO] --- resources:3.2.0:testResources (default-testResources) @ led-device ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Using 'UTF-8' encoding to copy filtered properties files.
+[INFO] skip non existing resourceDirectory F:\work\led-cloud\led-device\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.10.1:testCompile (default-testCompile) @ led-device ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- surefire:2.22.2:test (default-test) @ led-device ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.2.2:jar (default-jar) @ led-device ---
+[INFO] Building jar: F:\work\led-cloud\led-device\target\led-device-1.0.0.jar
+[INFO] 
+[INFO] --- spring-boot:2.7.18:repackage (repackage) @ led-device ---
+[INFO] Replacing main artifact with repackaged archive
+[INFO] 
+[INFO] ------------------------< com.led:led-content >-------------------------
+[INFO] Building LED Content Service - Content Management 1.0.0            [6/7]
+[INFO]   from led-content\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[WARNING] The artifact mysql:mysql-connector-java:jar:8.0.33 has been relocated to com.mysql:mysql-connector-j:jar:8.0.33: MySQL Connector/J artifacts moved to reverse-DNS compliant Maven 2+ coordinates.
+[INFO] 
+[INFO] --- clean:3.2.0:clean (default-clean) @ led-content ---
+[INFO] Deleting F:\work\led-cloud\led-content\target
+[INFO] 
+[INFO] --- resources:3.2.0:resources (default-resources) @ led-content ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Using 'UTF-8' encoding to copy filtered properties files.
+[INFO] Copying 1 resource
+[INFO] Copying 0 resource
+[INFO] 
+[INFO] --- compiler:3.10.1:compile (default-compile) @ led-content ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 8 source files to F:\work\led-cloud\led-content\target\classes
+[INFO] 
+[INFO] --- resources:3.2.0:testResources (default-testResources) @ led-content ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Using 'UTF-8' encoding to copy filtered properties files.
+[INFO] skip non existing resourceDirectory F:\work\led-cloud\led-content\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.10.1:testCompile (default-testCompile) @ led-content ---
+[INFO] No sources to compile
+[INFO] 
+[INFO] --- surefire:2.22.2:test (default-test) @ led-content ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- jar:3.2.2:jar (default-jar) @ led-content ---
+[INFO] Building jar: F:\work\led-cloud\led-content\target\led-content-1.0.0.jar
+[INFO] 
+[INFO] --- spring-boot:2.7.18:repackage (repackage) @ led-content ---
+[INFO] Replacing main artifact with repackaged archive
+[INFO] 
+[INFO] ------------------------< com.led:led-schedule >------------------------
+[INFO] Building LED Schedule Service - Program & Playback Scheduling 1.0.0 [7/7]
+[INFO]   from led-schedule\pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[WARNING] The POM for com.alibaba:druid:jar:1.2.6 is invalid, transitive dependencies (if any) will not be available: 2 problems were encountered while building the effective model for com.alibaba:druid:1.2.6
+[ERROR] 'dependencies.dependency.systemPath' for com.sun:tools:jar must specify an absolute path but is ${project.basedir}/lib/openjdk-1.8-tools.jar @ 
+[ERROR] 'dependencies.dependency.systemPath' for com.sun:jconsole:jar must specify an absolute path but is ${project.basedir}/lib/openjdk-1.8-jconsole.jar @ 
+
+[WARNING] The artifact mysql:mysql-connector-java:jar:8.0.33 has been relocated to com.mysql:mysql-connector-j:jar:8.0.33: MySQL Connector/J artifacts moved to reverse-DNS compliant Maven 2+ coordinates.
+[INFO] 
+[INFO] --- clean:3.2.0:clean (default-clean) @ led-schedule ---
+[INFO] Deleting F:\work\led-cloud\led-schedule\target
+[INFO] 
+[INFO] --- resources:3.2.0:resources (default-resources) @ led-schedule ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Using 'UTF-8' encoding to copy filtered properties files.
+[INFO] Copying 1 resource
+[INFO] Copying 0 resource
+[INFO] 
+[INFO] --- compiler:3.10.1:compile (default-compile) @ led-schedule ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 28 source files to F:\work\led-cloud\led-schedule\target\classes
+[INFO] -------------------------------------------------------------
+[ERROR] COMPILATION ERROR : 
+[INFO] -------------------------------------------------------------
+[ERROR] /F:/work/led-cloud/led-schedule/src/main/java/com/led/schedule/service/DashboardService.java:[74,67] 不兼容的类型: com.baomidou.mybatisplus.core.metadata.IPage<com.led.common.entity.PlayLog>无法转换为com.baomidou.mybatisplus.extension.plugins.pagination.Page<com.led.common.entity.PlayLog>
+[INFO] 1 error
+[INFO] -------------------------------------------------------------
+[INFO] ------------------------------------------------------------------------
+[INFO] Reactor Summary for LED Cloud - Microservices Parent 1.0.0:
+[INFO] 
+[INFO] LED Cloud - Microservices Parent ................... SUCCESS [  1.925 s]
+[INFO] LED Common Module .................................. SUCCESS [  5.298 s]
+[INFO] LED API Gateway .................................... SUCCESS [  3.289 s]
+[INFO] LED Auth Service - Authentication Center ........... SUCCESS [  3.235 s]
+[INFO] LED Device Service - Device Management ............. SUCCESS [  3.267 s]
+[INFO] LED Content Service - Content Management ........... SUCCESS [  3.036 s]
+[INFO] LED Schedule Service - Program & Playback Scheduling FAILURE [  4.032 s]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  24.830 s
+[INFO] Finished at: 2026-07-16T09:37:50+08:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.10.1:compile (default-compile) on project led-schedule: Compilation failure
+[ERROR] /F:/work/led-cloud/led-schedule/src/main/java/com/led/schedule/service/DashboardService.java:[74,67] 不兼容的类型: com.baomidou.mybatisplus.core.metadata.IPage<com.led.common.entity.PlayLog>无法转换为com.baomidou.mybatisplus.extension.plugins.pagination.Page<com.led.common.entity.PlayLog>
+[ERROR] 
+[ERROR] -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoFailureException
+[ERROR] 
+[ERROR] After correcting the problems, you can resume the build with the command
+[ERROR]   mvn <args> -rf :led-schedule

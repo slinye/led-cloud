@@ -1,0 +1,148 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "LED Cloud",
+        "navigationBarBackgroundColor": "#1a73e8",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/screens/list",
+      "style": {
+        "navigationBarTitleText": "屏幕设备",
+        "navigationBarBackgroundColor": "#1a73e8",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/screens/detail",
+      "style": {
+        "navigationBarTitleText": "屏幕详情",
+        "navigationBarBackgroundColor": "#1a73e8",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/contents/list",
+      "style": {
+        "navigationBarTitleText": "内容管理",
+        "navigationBarBackgroundColor": "#1a73e8",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/contents/detail",
+      "style": {
+        "navigationBarTitleText": "内容详情",
+        "navigationBarBackgroundColor": "#1a73e8",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/contents/add",
+      "style": {
+        "navigationBarTitleText": "新建内容",
+        "navigationBarBackgroundColor": "#1a73e8",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/programs/list",
+      "style": {
+        "navigationBarTitleText": "播放节目",
+        "navigationBarBackgroundColor": "#1a73e8",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/programs/detail",
+      "style": {
+        "navigationBarTitleText": "节目详情",
+        "navigationBarBackgroundColor": "#1a73e8",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/programs/add",
+      "style": {
+        "navigationBarTitleText": "创建节目",
+        "navigationBarBackgroundColor": "#1a73e8",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/mine/mine",
+      "style": {
+        "navigationBarTitleText": "我的",
+        "navigationBarBackgroundColor": "#1a73e8",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/schedule/list",
+      "style": {
+        "navigationBarTitleText": "定时播放",
+        "navigationBarBackgroundColor": "#1a73e8",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/schedule/add",
+      "style": {
+        "navigationBarTitleText": "新建定时",
+        "navigationBarBackgroundColor": "#1a73e8",
+        "navigationBarTextStyle": "white"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarBackgroundColor": "#1a73e8",
+    "navigationBarTitleText": "LED Cloud",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f5f7fa"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#1a73e8",
+    "borderStyle": "white",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "iconPath": "static/icons/home.png",
+        "selectedIconPath": "static/icons/home-active.png",
+        "text": "概览"
+      },
+      {
+        "pagePath": "pages/screens/list",
+        "iconPath": "static/icons/screen.png",
+        "selectedIconPath": "static/icons/screen-active.png",
+        "text": "设备"
+      },
+      {
+        "pagePath": "pages/contents/list",
+        "iconPath": "static/icons/content.png",
+        "selectedIconPath": "static/icons/content-active.png",
+        "text": "内容"
+      },
+      {
+        "pagePath": "pages/programs/list",
+        "iconPath": "static/icons/program.png",
+        "selectedIconPath": "static/icons/program-active.png",
+        "text": "节目"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "iconPath": "static/icons/mine.png",
+        "selectedIconPath": "static/icons/mine-active.png",
+        "text": "我的"
+      }
+    ]
+  },
+  "easycom": {
+    "autoscan": true,
+    "custom": {}
+  }
+}
